@@ -1,8 +1,7 @@
 """
-ForgeUI Quick Presets Extension
+ForgeUI Quick Presets Extension - Mobile Friendly Version
 A simple extension to save, load, and manage prompt presets.
-
-This extension adds a dedicated tab to ForgeUI/Automatic1111 for managing presets.
+Designed for mobile-friendly use with essential settings only.
 """
 
 import os
@@ -37,20 +36,10 @@ def save_presets_to_file(presets):
         return False
 
 
-def get_preset_list():
+def get_preset_choices():
     """Get list of preset names for dropdown."""
     presets = load_presets()
-    return gr.Dropdown(choices=list(presets.keys()))
-
-
-def get_preset_table_data():
-    """Get presets as table data for display."""
-    presets = load_presets()
-    data = []
-    for name, p in presets.items():
-        prompt_preview = p.get("prompt", "")[:60] + "..." if len(p.get("prompt", "")) > 60 else p.get("prompt", "")
-        data.append([name, prompt_preview, p.get("steps", 20), p.get("sampler", "DPM++ 2M")])
-    return data
+    return list(presets.keys())
 
 
 def get_available_samplers():
@@ -59,158 +48,142 @@ def get_available_samplers():
         from modules.sd_samplers import samplers
         return [s.name for s in samplers]
     except:
-        return [
-            "DPM++ 2M", "DPM++ SDE", "DPM++ 2M Karras", "DPM++ 2M SDE Karras",
-            "DPM++ 2M SDE Exponential", "DPM++ 2M SDE Heun", "DPM++ 3M SDE",
-            "Euler a", "Euler", "LMS", "LMS Karras", "Heun", "DDIM", "UniPC"
-        ]
+        return ["DPM++ 2M", "Euler a", "Euler", "DDIM", "UniPC"]
 
 
 def on_ui_tabs():
-    """Create a dedicated tab for preset management."""
-    with gr.Blocks() as presets_tab:
-        gr.Markdown("# 🎨 Quick Presets Manager")
-        gr.Markdown("Save and manage your Stable Diffusion prompt presets. Copy presets to clipboard and paste into txt2img/img2img.")
+    """Create a mobile-friendly preset management tab."""
+    
+    # Custom CSS for mobile-friendly layout
+    custom_css = """
+    .preset-mobile-container {
+        max-width: 100%;
+        padding: 10px;
+    }
+    .preset-mobile-container .gr-button {
+        min-height: 44px !important;
+        font-size: 16px !important;
+    }
+    .preset-mobile-container .gr-text-input, 
+    .preset-mobile-container .gr-textbox textarea {
+        font-size: 16px !important;
+    }
+    .preset-status-ok {
+        background-color: #2d5a27 !important;
+        color: white !important;
+    }
+    .preset-status-error {
+        background-color: #5a2727 !important;
+        color: white !important;
+    }
+    """
+    
+    with gr.Blocks(css=custom_css) as presets_tab:
         
-        # Status display
-        status_box = gr.Textbox(label="Status", interactive=False, visible=True)
+        # ========== PRESET SELECTOR ==========
+        gr.Markdown("## 📱 Presets")
         
         with gr.Row():
-            # Left column: Preset List
-            with gr.Column(scale=2):
-                gr.Markdown("### Saved Presets")
-                
-                preset_table = gr.Dataframe(
-                    headers=["Name", "Prompt Preview", "Steps", "Sampler"],
-                    datatype=["str", "str", "number", "str"],
-                    label="Your Presets",
-                    interactive=False,
-                    value=get_preset_table_data()
-                )
-                
-                with gr.Row():
-                    refresh_btn = gr.Button("🔄 Refresh", variant="secondary")
-                    delete_btn = gr.Button("🗑️ Delete Selected", variant="stop")
-                
-                # Dropdown for selecting preset to load
-                preset_select = gr.Dropdown(
-                    choices=list(load_presets().keys()),
-                    label="Select Preset",
-                    interactive=True
-                )
-                load_btn = gr.Button("📥 Load Preset", variant="primary")
-            
-            # Right column: Preset Editor
-            with gr.Column(scale=3):
-                gr.Markdown("### Create/Edit Preset")
-                
-                preset_name = gr.Textbox(
-                    label="Preset Name",
-                    placeholder="Enter a name for this preset..."
-                )
-                
-                prompt_box = gr.Textbox(
-                    label="Prompt",
-                    lines=4,
-                    placeholder="Enter your positive prompt here..."
-                )
-                
-                negative_box = gr.Textbox(
-                    label="Negative Prompt",
-                    lines=2,
-                    placeholder="Enter negative prompt here..."
-                )
-                
-                with gr.Row():
-                    steps_slider = gr.Slider(
-                        minimum=1,
-                        maximum=150,
-                        value=20,
-                        step=1,
-                        label="Steps"
-                    )
-                    sampler_dropdown = gr.Dropdown(
-                        choices=get_available_samplers(),
-                        value="DPM++ 2M",
-                        label="Sampler"
-                    )
-                
-                with gr.Row():
-                    width_slider = gr.Slider(
-                        minimum=256,
-                        maximum=2048,
-                        value=512,
-                        step=64,
-                        label="Width"
-                    )
-                    height_slider = gr.Slider(
-                        minimum=256,
-                        maximum=2048,
-                        value=512,
-                        step=64,
-                        label="Height"
-                    )
-                
-                cfg_slider = gr.Slider(
-                    minimum=1,
-                    maximum=30,
-                    value=7.0,
-                    step=0.5,
-                    label="CFG Scale"
-                )
-                
-                with gr.Row():
-                    save_btn = gr.Button("💾 Save Preset", variant="primary")
-                    overwrite_btn = gr.Button("✏️ Overwrite Selected", variant="secondary")
+            preset_dropdown = gr.Dropdown(
+                choices=get_preset_choices(),
+                label="📂 Your Presets",
+                interactive=True,
+                scale=4
+            )
         
-        # Import/Export Section
+        with gr.Row():
+            load_btn = gr.Button("📥 Load", variant="primary", size="lg")
+            delete_btn = gr.Button("🗑️ Delete", variant="secondary", size="lg")
+        
+        # Status display
+        status_box = gr.Textbox(label="", interactive=False, lines=1, placeholder="Ready")
+        
+        # ========== QUICK PROMPT (Main Focus) ==========
+        gr.Markdown("---")
+        
+        preset_name = gr.Textbox(
+            label="✏️ Preset Name",
+            placeholder="Enter name...",
+            lines=1
+        )
+        
+        prompt_box = gr.Textbox(
+            label="✨ Prompt",
+            placeholder="Your positive prompt...",
+            lines=3,
+            max_lines=6
+        )
+        
+        negative_box = gr.Textbox(
+            label="🚫 Negative Prompt",
+            placeholder="Things to avoid...",
+            lines=2,
+            max_lines=4
+        )
+        
+        # ========== BASIC SETTINGS (Collapsed by default) ==========
+        with gr.Accordion("⚙️ Settings", open=False):
+            with gr.Row():
+                steps_slider = gr.Slider(1, 150, value=20, step=1, label="Steps")
+                cfg_slider = gr.Slider(1, 30, value=7, step=0.5, label="CFG Scale")
+            
+            with gr.Row():
+                width_slider = gr.Slider(256, 2048, value=512, step=64, label="Width")
+                height_slider = gr.Slider(256, 2048, value=512, step=64, label="Height")
+            
+            sampler_dropdown = gr.Dropdown(
+                choices=get_available_samplers(),
+                value="DPM++ 2M",
+                label="Sampler"
+            )
+        
+        # ========== ACTION BUTTONS ==========
+        with gr.Row():
+            save_btn = gr.Button("💾 Save New", variant="primary", size="lg")
+            overwrite_btn = gr.Button("✏️ Overwrite", variant="secondary", size="lg")
+        
+        # ========== IMPORT/EXPORT (Collapsed) ==========
         with gr.Accordion("📦 Import/Export", open=False):
             with gr.Row():
-                with gr.Column():
-                    export_btn = gr.Button("📤 Export All to JSON")
-                    export_output = gr.Textbox(
-                        label="Exported JSON (copy this)",
-                        lines=6,
-                        interactive=False
-                    )
-            with gr.Row():
-                with gr.Column():
-                    import_input = gr.Textbox(
-                        label="Import JSON",
-                        lines=6,
-                        placeholder="Paste presets JSON here..."
-                    )
-                    import_btn = gr.Button("📥 Import from JSON", variant="primary")
+                export_btn = gr.Button("📤 Export All", size="sm")
+                import_btn = gr.Button("📥 Import", size="sm")
+            
+            export_output = gr.Textbox(
+                label="Exported JSON",
+                lines=4,
+                interactive=False,
+                placeholder="Click Export to generate..."
+            )
+            
+            import_input = gr.Textbox(
+                label="Paste JSON to Import",
+                lines=4,
+                placeholder="Paste presets JSON here..."
+            )
         
-        # Copy Section
-        with gr.Accordion("📋 Quick Copy", open=False):
-            gr.Markdown("Copy preset values to clipboard for pasting into txt2img/img2img")
+        # ========== COPY OUTPUT ==========
+        with gr.Accordion("📋 Copy Prompt", open=False):
             copy_output = gr.Textbox(
-                label="Formatted Prompt (copy and paste into txt2img)",
+                label="Copy this to txt2img:",
                 lines=4,
                 interactive=False
             )
-            format_btn = gr.Button("📋 Format for Copying")
+            copy_btn = gr.Button("📋 Format for Copy", size="sm")
         
-        # ========== Event Handlers ==========
+        # ========== EVENT HANDLERS ==========
         
-        def refresh_all():
-            presets = load_presets()
-            return (
-                gr.Dropdown(choices=list(presets.keys())),
-                get_preset_table_data(),
-                "✓ List refreshed"
-            )
+        def update_status(msg, is_error=False):
+            return msg
         
-        def save_new_preset(name, prompt, negative, steps, sampler, width, height, cfg):
+        def do_save_new(name, prompt, negative, steps, sampler, width, height, cfg):
             if not name or not name.strip():
-                return gr.Dropdown(), get_preset_table_data(), "❌ Error: Preset name cannot be empty"
+                return gr.Dropdown(choices=get_preset_choices()), "❌ Enter a name first"
             
             name = name.strip()
             presets = load_presets()
             
             if name in presets:
-                return gr.Dropdown(), get_preset_table_data(), f"❌ Error: Preset '{name}' already exists. Use Overwrite to replace it."
+                return gr.Dropdown(choices=get_preset_choices()), f"❌ '{name}' exists - use Overwrite"
             
             presets[name] = {
                 "prompt": prompt,
@@ -223,16 +196,12 @@ def on_ui_tabs():
             }
             
             if save_presets_to_file(presets):
-                return (
-                    gr.Dropdown(choices=list(presets.keys())),
-                    get_preset_table_data(),
-                    f"✓ Saved preset: {name}"
-                )
-            return gr.Dropdown(), get_preset_table_data(), "❌ Error: Failed to save preset"
+                return gr.Dropdown(choices=get_preset_choices()), f"✅ Saved: {name}"
+            return gr.Dropdown(choices=get_preset_choices()), "❌ Save failed"
         
-        def overwrite_preset(name, prompt, negative, steps, sampler, width, height, cfg):
+        def do_overwrite(name, prompt, negative, steps, sampler, width, height, cfg):
             if not name or not name.strip():
-                return gr.Dropdown(), get_preset_table_data(), "❌ Error: Select a preset first or enter a name"
+                return gr.Dropdown(choices=get_preset_choices()), "❌ Enter a name first"
             
             name = name.strip()
             presets = load_presets()
@@ -248,20 +217,16 @@ def on_ui_tabs():
             }
             
             if save_presets_to_file(presets):
-                return (
-                    gr.Dropdown(choices=list(presets.keys())),
-                    get_preset_table_data(),
-                    f"✓ Overwritten preset: {name}"
-                )
-            return gr.Dropdown(), get_preset_table_data(), "❌ Error: Failed to save preset"
+                return gr.Dropdown(choices=get_preset_choices()), f"✅ Updated: {name}"
+            return gr.Dropdown(choices=get_preset_choices()), "❌ Save failed"
         
-        def load_selected_preset(selected_name):
+        def do_load(selected_name):
             if not selected_name:
-                return "", "", 20, "DPM++ 2M", 512, 512, 7.0, "❌ No preset selected"
+                return "", "", 20, "DPM++ 2M", 512, 512, 7.0, "", "❌ Select a preset"
             
             presets = load_presets()
             if selected_name not in presets:
-                return "", "", 20, "DPM++ 2M", 512, 512, 7.0, f"❌ Error: Preset '{selected_name}' not found"
+                return "", "", 20, "DPM++ 2M", 512, 512, 7.0, "", f"❌ Not found: {selected_name}"
             
             p = presets[selected_name]
             return (
@@ -272,143 +237,120 @@ def on_ui_tabs():
                 p.get("width", 512),
                 p.get("height", 512),
                 p.get("cfg_scale", 7.0),
-                f"✓ Loaded preset: {selected_name}"
+                selected_name,
+                f"✅ Loaded: {selected_name}"
             )
         
-        def delete_selected_preset(selected_name):
+        def do_delete(selected_name):
             if not selected_name:
-                return gr.Dropdown(), get_preset_table_data(), "❌ No preset selected"
+                return gr.Dropdown(choices=get_preset_choices()), "❌ Select a preset first"
             
             presets = load_presets()
             if selected_name in presets:
                 del presets[selected_name]
                 save_presets_to_file(presets)
-                return (
-                    gr.Dropdown(choices=list(presets.keys())),
-                    get_preset_table_data(),
-                    f"✓ Deleted preset: {selected_name}"
-                )
-            return gr.Dropdown(), get_preset_table_data(), f"❌ Error: Preset '{selected_name}' not found"
+                return gr.Dropdown(choices=get_preset_choices()), f"✅ Deleted: {selected_name}"
+            return gr.Dropdown(choices=get_preset_choices()), f"❌ Not found: {selected_name}"
         
-        def export_all_presets():
+        def do_export():
             presets = load_presets()
             if not presets:
-                return "No presets to export"
+                return "No presets saved"
             return json.dumps(presets, indent=2)
         
-        def import_presets_from_json(json_str):
+        def do_import(json_str):
             if not json_str or not json_str.strip():
-                return gr.Dropdown(), get_preset_table_data(), "❌ Error: No JSON provided"
+                return gr.Dropdown(choices=get_preset_choices()), "❌ No JSON provided"
             
             try:
                 imported = json.loads(json_str)
                 if not isinstance(imported, dict):
-                    return gr.Dropdown(), get_preset_table_data(), "❌ Error: Invalid format. Expected JSON object with preset names as keys."
+                    return gr.Dropdown(choices=get_preset_choices()), "❌ Invalid format"
                 
                 presets = load_presets()
                 count = len(imported)
                 presets.update(imported)
                 save_presets_to_file(presets)
-                
-                return (
-                    gr.Dropdown(choices=list(presets.keys())),
-                    get_preset_table_data(),
-                    f"✓ Imported {count} presets"
-                )
+                return gr.Dropdown(choices=get_preset_choices()), f"✅ Imported {count} presets"
             except json.JSONDecodeError as e:
-                return gr.Dropdown(), get_preset_table_data(), f"❌ Error parsing JSON: {e}"
+                return gr.Dropdown(choices=get_preset_choices()), f"❌ JSON error: {e}"
         
-        def format_for_copy(name, prompt, negative, steps, sampler, width, height, cfg):
+        def do_format_copy(name, prompt, negative, steps, sampler, width, height, cfg):
             if not prompt and not name:
-                return "Enter a prompt or load a preset first"
+                return "Load or enter a preset first"
             
-            formatted = f"""Prompt: {prompt}
-Negative: {negative}
-Steps: {steps}, Sampler: {sampler}
-Size: {width}x{height}, CFG: {cfg}"""
-            return formatted
+            return f"""Steps: {steps}, Sampler: {sampler}, CFG: {cfg}
+Size: {width}x{height}
+
+Prompt:
+{prompt}
+
+Negative:
+{negative}"""
         
-        # ========== Wire Up Events ==========
-        
-        refresh_btn.click(
-            fn=refresh_all,
-            inputs=[],
-            outputs=[preset_select, preset_table, status_box]
-        )
-        
-        save_btn.click(
-            fn=save_new_preset,
-            inputs=[preset_name, prompt_box, negative_box, steps_slider, 
-                    sampler_dropdown, width_slider, height_slider, cfg_slider],
-            outputs=[preset_select, preset_table, status_box]
-        )
-        
-        overwrite_btn.click(
-            fn=overwrite_preset,
-            inputs=[preset_name, prompt_box, negative_box, steps_slider,
-                    sampler_dropdown, width_slider, height_slider, cfg_slider],
-            outputs=[preset_select, preset_table, status_box]
-        )
+        # ========== WIRE UP EVENTS ==========
         
         load_btn.click(
-            fn=load_selected_preset,
-            inputs=[preset_select],
+            fn=do_load,
+            inputs=[preset_dropdown],
             outputs=[prompt_box, negative_box, steps_slider, sampler_dropdown,
-                    width_slider, height_slider, cfg_slider, status_box]
+                    width_slider, height_slider, cfg_slider, preset_name, status_box]
         )
         
-        # Also load when dropdown selection changes
-        preset_select.change(
-            fn=load_selected_preset,
-            inputs=[preset_select],
+        preset_dropdown.change(
+            fn=do_load,
+            inputs=[preset_dropdown],
             outputs=[prompt_box, negative_box, steps_slider, sampler_dropdown,
-                    width_slider, height_slider, cfg_slider, status_box]
+                    width_slider, height_slider, cfg_slider, preset_name, status_box]
         )
         
         delete_btn.click(
-            fn=delete_selected_preset,
-            inputs=[preset_select],
-            outputs=[preset_select, preset_table, status_box]
+            fn=do_delete,
+            inputs=[preset_dropdown],
+            outputs=[preset_dropdown, status_box]
+        )
+        
+        save_btn.click(
+            fn=do_save_new,
+            inputs=[preset_name, prompt_box, negative_box, steps_slider,
+                    sampler_dropdown, width_slider, height_slider, cfg_slider],
+            outputs=[preset_dropdown, status_box]
+        )
+        
+        overwrite_btn.click(
+            fn=do_overwrite,
+            inputs=[preset_name, prompt_box, negative_box, steps_slider,
+                    sampler_dropdown, width_slider, height_slider, cfg_slider],
+            outputs=[preset_dropdown, status_box]
         )
         
         export_btn.click(
-            fn=export_all_presets,
-            inputs=[],
+            fn=do_export,
             outputs=[export_output]
         )
         
         import_btn.click(
-            fn=import_presets_from_json,
+            fn=do_import,
             inputs=[import_input],
-            outputs=[preset_select, preset_table, status_box]
+            outputs=[preset_dropdown, status_box]
         )
         
-        format_btn.click(
-            fn=format_for_copy,
+        copy_btn.click(
+            fn=do_format_copy,
             inputs=[preset_name, prompt_box, negative_box, steps_slider,
                     sampler_dropdown, width_slider, height_slider, cfg_slider],
             outputs=[copy_output]
         )
-        
-        # Sync preset name dropdown with name textbox when loading
-        def sync_name_from_dropdown(selected_name):
-            return selected_name if selected_name else ""
-        
-        preset_select.change(
-            fn=sync_name_from_dropdown,
-            inputs=[preset_select],
-            outputs=[preset_name]
-        )
     
-    return [(presets_tab, "Quick Presets", "extension_quick_presets")]
+    return [(presets_tab, "📱 Presets", "extension_quick_presets")]
 
 
-# Register the tab when module loads
+# Register the tab
 try:
     from modules import script_callbacks
     script_callbacks.on_ui_tabs(on_ui_tabs)
-    print("[Quick Presets] Extension loaded successfully!")
+    print("[Quick Presets] Mobile-friendly version loaded!")
 except ImportError:
-    print("[Quick Presets] Warning: Could not register UI tab. Make sure this is loaded in ForgeUI/Automatic1111")
+    print("[Quick Presets] Warning: Could not register UI tab")
 except Exception as e:
     print(f"[Quick Presets] Error during initialization: {e}")
