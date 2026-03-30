@@ -1,0 +1,11 @@
+{
+    "name": "Quick Presets",
+    "version": "1.0.0",
+    "description": "Save, load, and manage your Stable Diffusion prompt presets with ease.",
+    "author": "Nova",
+    "homepage": "https://github.com/yourusername/forgeui-quick-presets",
+    "tags": ["presets", "prompts", "management", "utility"],
+    "sd_version": "2.1.0",
+    "forgeui_compatible": true,
+    "a1111_compatible": true
+}
