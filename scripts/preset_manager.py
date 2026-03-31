@@ -267,6 +267,20 @@ def on_ui_tabs():
                 if not isinstance(imported, dict):
                     return gr.Dropdown(choices=get_preset_choices()), "❌ Invalid format"
                 
+                # Validate preset structure
+                required_fields = ['prompt', 'negative', 'steps', 'sampler', 'width', 'height', 'cfg']
+                invalid = []
+                for name, preset in imported.items():
+                    if not isinstance(preset, dict):
+                        invalid.append(name)
+                        continue
+                    missing = [f for f in required_fields if f not in preset]
+                    if missing:
+                        invalid.append(f"{name} (missing: {', '.join(missing)})")
+                
+                if invalid:
+                    return gr.Dropdown(choices=get_preset_choices()), f"⚠️ Some presets invalid: {', '.join(invalid[:3])}"
+                
                 presets = load_presets()
                 count = len(imported)
                 presets.update(imported)
